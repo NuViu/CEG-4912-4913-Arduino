@@ -7,43 +7,59 @@
 */
 
 #include <Wire.h>
-#include <MPU6050.h>
+#include <basicMPU6050.h>
 
-#include <iostream>
-using namespace std;
-
-MPU6050 mpu;
+basicMPU6050<> mpu;
+char state = 0;
 
 void setup() 
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
+  Serial1.begin(9600);
 
-  Serial.println("Initialize MPU6050");
+  // Set registers - Always required
+  mpu.setup();
 
-  while(!mpu.begin(MPU6050_SCALE_2000DPS, MPU6050_RANGE_2G))
-  {
-    Serial.println("Could not find a valid MPU6050 sensor, check wiring!");
-    delay(500);
-  }
-  cout << mpu.mpuAddress;
+  // Initial calibration of gyro
+  mpu.setBias();
 }
 
 void loop()
 {
   // Read normalized values 
-  Vector normAccel = mpu.readNormalizeAccel();
+  int16_t accelX = mpu.rawAx();
+  int16_t accelY = mpu.rawAy();
+  int16_t accelZ = mpu.rawAz();
+
+  int magnitude = sqrt(sq(accelX) + sq(accelY) + sq(accelZ));
+
+  switch (state)
+  {
+    case 0:
+      if (magnitude <= 1638)
+      {
+        state = 1;
+      }
+      break;
+    case 10:
+      if (magnitude >= 1638) {
+        Serial.println("Fall detected");
+        state = 0;
+      }
+      break;
+    default:
+      state += 1;
+  }
+  
+//  Serial.print(accelX);
+//  Serial.print(" , ");
+//  Serial.print(accelY);
+//  Serial.print(" , ");
+//  Serial.print(accelZ);
 
   // Calculate Pitch & Roll
-  int pitch = -(atan2(normAccel.XAxis, sqrt(normAccel.YAxis*normAccel.YAxis + normAccel.ZAxis*normAccel.ZAxis))*180.0)/M_PI;
-  int roll = (atan2(normAccel.YAxis, normAccel.ZAxis)*180.0)/M_PI;
 
   // Output
-  Serial.print(" Pitch = ");
-  Serial.print(pitch);
-  Serial.print(" Roll = ");
-  Serial.print(roll);
-  
-  Serial.println();
   
   delay(10);
 }
