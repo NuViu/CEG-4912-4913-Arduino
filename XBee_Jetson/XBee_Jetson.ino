@@ -5,7 +5,26 @@
   www.HowToMechatronics.com
 
 */
-//Ultrasonic
+
+// Accelerometer
+#include <Wire.h>
+#include <basicMPU6050.h>
+
+basicMPU6050<> mpu;
+char accelState = 0;
+int fallDetected = 0;
+int fallTimer = 0;
+int fallOutput = 0;
+
+int16_t accelX;
+int16_t accelY;
+int16_t accelZ;
+int accelMagnitude;
+
+const int ACCEL_THRESHOLD = 1638; // 10% error margin for freefall
+const int FALL_TIMER_SEC = 120;
+
+// Ultrasonic
 // defines pins numbers
 const int trigPin1 = 7;
 const int echoPin1 = 8;
@@ -26,19 +45,27 @@ char dict[30];
 
 //Buttons
 // push button pins
-const int streetMode = 5;     
+const int streetMode = 5;
+const int readSignButton = 4;
 const int navigationMode = 3;
+const int fallCancelButton = 6;
 
 // push button states
-int streetModeState = 0; 
-int navigationModeState = 0; 
+int streetModeState = 0;
+int readSignState = 0;
+int navigationModeState = 0;
+int fallCancelState = 0;
 
 // mode state
 bool streetModeOn = false;
+bool readSignOn = false;
 bool navigationModeOn = false;
 
 
 void setup() {
+  //Accelerometer
+  mpu.setup(); // Set registers - Always required
+  mpu.setBias(); // Initial calibration
   //Ultrasonic
   pinMode(trigPin1, OUTPUT); // Sets the trigPin as an Output
   pinMode(echoPin1, INPUT); // Sets the echoPin as an Input
@@ -55,7 +82,9 @@ void loop() {
 //Buttons
   // read the state of the pushbutton value:
   streetModeState = digitalRead(streetMode);
+  readSignState = digitalRead(readSignButton);
   navigationModeState = digitalRead(navigationMode);
+  fallCancelState = digitalRead(fallCancelButton);
 
   if (streetModeState == HIGH){
     streetModeOn = !streetModeOn;
@@ -65,6 +94,17 @@ void loop() {
   else if (navigationModeState == HIGH) {
     navigationModeOn = !navigationModeOn;
     delay(1000);
+  }
+
+  if (readSignState == HIGH) {
+    readSignOn = true;
+    streetModeOn = false;
+  } else {
+    readSignOn = false;
+  }
+
+  if (fallCancelState == HIGH) {
+    fallDetected = 0;
   }
 //---------------------------
   
@@ -143,10 +183,35 @@ void loop() {
     Serial.println("No vibration on RS");
   }
 
+  // Accelerometer
+  accelX = mpu.rawAx();
+  accelY = mpu.rawAy();
+  accelZ = mpu.rawAz();
+  accelMagnitude = sqrt(sq(accelX) + sq(accelY) + sq(accelZ));
 
+  if (fallDetected == 0) {
+    if (accelState == 0) {
+      if (accelMagnitude <= ACCEL_THRESHOLD) {
+        accelState = 1;
+      }
+    }
+    else {
+      if (accelMagnitude >= ACCEL_THRESHOLD) {
+        fallDetected = 1;
+        fallTimer = millis();
+        accelState = 0;
+      }
+    }
+  }
+  else {
+    if (millis() - fallTimer >= 1000 * FALL_TIMER_SEC) {
+      fallOutput = 1;
+      fallDetected = 0;
+    }
+  }
 
   // Writes intensity to Python Dictionairy Directly for Demo
-  sprintf(dict, "{\"lh\": %d, \"rh\": %d, \"nm\": %d, \"sm\": %d}", intensity, intensity2, navigationModeOn, streetModeOn);
+  sprintf(dict, "{\"lh\": %d, \"rh\": %d, \"nm\": %d, \"sm\": %d, \"rs\": %d, \"fd\": %d}", intensity, intensity2, navigationModeOn, streetModeOn, readSignOn, fallOutput);
   Serial.println(dict);
   Serial1.println(dict);
 

@@ -33,23 +33,21 @@ void loop()
 
   int magnitude = sqrt(sq(accelX) + sq(accelY) + sq(accelZ));
 
-  switch (state)
+ if (state == 0)
+ {
+  if (magnitude <= 1638) // 10% error margin
   {
-    case 0:
-      if (magnitude <= 1638)
-      {
-        state = 1;
-      }
-      break;
-    case 10:
-      if (magnitude >= 1638) {
-        Serial.println("Fall detected");
-        state = 0;
-      }
-      break;
-    default:
-      state += 1;
+    state = 1;
   }
+ }
+ else
+ {
+  if (magnitude >= 1638)
+  {
+    Serial.println("Fall detected");
+    state = 0;
+  }
+ }
   
 //  Serial.print(accelX);
 //  Serial.print(" , ");
