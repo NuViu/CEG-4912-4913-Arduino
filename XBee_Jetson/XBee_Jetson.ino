@@ -21,15 +21,15 @@ int16_t accelY;
 int16_t accelZ;
 int accelMagnitude;
 
-const int ACCEL_THRESHOLD = 1638; // 10% error margin for freefall
-const int FALL_TIMER_SEC = 120;
+const int ACCEL_THRESHOLD = 10000; // 10% error margin for freefall
+const int FALL_TIMER_SEC = 5;
 
 // Ultrasonic
 // defines pins numbers
-const int trigPin1 = 7;
-const int echoPin1 = 8;
-const int trigPin2 = 9;
-const int echoPin2 = 10;
+const int trigPin1 = 7;  // left
+const int echoPin1 = 8;  // left
+const int trigPin2 = 9;  // right
+const int echoPin2 = 10; // right
 // number of samples to average
 const int num_samples = 10;
 // defines variables
@@ -41,14 +41,14 @@ int distance;
 int distance2;
 int intensity = 0;
 int intensity2 = 0;
-char dict[30];
+char dict[64];
 
 //Buttons
 // push button pins
-const int streetMode = 5;
-const int readSignButton = 4;
-const int navigationMode = 3;
-const int fallCancelButton = 6;
+const int streetMode = 4;
+const int readSignButton = 5;
+const int navigationMode = 6;
+const int fallCancelButton = 3;
 
 // push button states
 int streetModeState = 0;
@@ -74,6 +74,8 @@ void setup() {
   //Buttons
   pinMode(streetMode, INPUT);
   pinMode(navigationMode, INPUT);
+  pinMode(readSignButton, INPUT);
+  pinMode(fallCancelButton, INPUT);
   Serial.begin(9600); // Starts the serial communication
   Serial1.begin(115200); // Starts the serial communication
 }
@@ -88,6 +90,9 @@ void loop() {
 
   if (streetModeState == HIGH){
     streetModeOn = !streetModeOn;
+    if (streetModeOn) {
+      readSignOn = false;
+    }
     delay(1000);
   }
 
@@ -97,17 +102,19 @@ void loop() {
   }
 
   if (readSignState == HIGH) {
-    readSignOn = true;
-    streetModeOn = false;
-  } else {
-    readSignOn = false;
+    readSignOn = !readSignOn;
+    if (readSignOn) {
+      streetModeOn = false;
+    }
+    delay(1000);
   }
 
   if (fallCancelState == HIGH) {
     fallDetected = 0;
+    delay(1000);
   }
 //---------------------------
-  
+
   //Average num_samples
   durations_sum = 0;
   durations_sum2 = 0;
@@ -189,31 +196,50 @@ void loop() {
   accelZ = mpu.rawAz();
   accelMagnitude = sqrt(sq(accelX) + sq(accelY) + sq(accelZ));
 
-  if (fallDetected == 0) {
-    if (accelState == 0) {
-      if (accelMagnitude <= ACCEL_THRESHOLD) {
-        accelState = 1;
+  if (accelMagnitude == accelMagnitude % 2) {
+    mpu.setup();
+  }
+  else {
+    if (fallDetected == 0) {
+      fallOutput = 0;
+      if (accelState == 0) {
+        if (accelMagnitude <= ACCEL_THRESHOLD) {
+          accelState = 1;
+        }
+      }
+      else {
+        if (accelMagnitude >= ACCEL_THRESHOLD) {
+          fallDetected = 1;
+          Serial.println("Fall Detected");
+          fallTimer = millis();
+          accelState = 0;
+        }
       }
     }
     else {
-      if (accelMagnitude >= ACCEL_THRESHOLD) {
-        fallDetected = 1;
-        fallTimer = millis();
-        accelState = 0;
+      if (millis() - fallTimer >= 1000 * FALL_TIMER_SEC) {
+        fallOutput = 1;
+        fallDetected = 0;
       }
     }
   }
-  else {
-    if (millis() - fallTimer >= 1000 * FALL_TIMER_SEC) {
-      fallOutput = 1;
-      fallDetected = 0;
-    }
-  }
+  
 
-  // Writes intensity to Python Dictionairy Directly for Demo
-  sprintf(dict, "{\"lh\": %d, \"rh\": %d, \"nm\": %d, \"sm\": %d, \"rs\": %d, \"fd\": %d}", intensity, intensity2, navigationModeOn, streetModeOn, readSignOn, fallOutput);
+  /* Writes intensity to Python Dictionairy Directly for Demo
+  lh -> left vibration (0-3)
+  rh -> right vibration (0-3)
+  nm -> navigation mode (0-1) top button toggle
+  sm -> street mode (0-1) third button toggle / mutex with rs
+  rs -> read sign (0-1) second button toggle  / mutex with sm
+  fd -> fall detected (0-1) sends text message
+  fa -> fall acknowledged (0-1) cancelled with bottom button
+  */
+  
+  sprintf(dict, "{\"lh\": %d, \"rh\": %d, \"nm\": %d, \"sm\": %d, \"rs\": %d, \"fd\": %d, \"fa\": %d}", intensity, intensity2, navigationModeOn, streetModeOn, readSignOn, fallOutput, fallDetected);
   Serial.println(dict);
   Serial1.println(dict);
+
+  //delay(100);
 
 }
 

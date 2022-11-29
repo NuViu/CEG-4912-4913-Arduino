@@ -15,7 +15,6 @@ char state = 0;
 void setup() 
 {
   Serial.begin(9600);
-  Serial1.begin(9600);
 
   // Set registers - Always required
   mpu.setup();
@@ -31,33 +30,38 @@ void loop()
   int16_t accelY = mpu.rawAy();
   int16_t accelZ = mpu.rawAz();
 
+
   int magnitude = sqrt(sq(accelX) + sq(accelY) + sq(accelZ));
 
- if (state == 0)
- {
-  if (magnitude <= 1638) // 10% error margin
-  {
-    state = 1;
+  if (magnitude == magnitude % 2) {
+    mpu.setup();
   }
- }
- else
- {
-  if (magnitude >= 1638)
-  {
-    Serial.println("Fall detected");
-    state = 0;
+  else {
+    if (state == 0) {
+      if (magnitude <= 1638) { // 10% error margin
+        state = 1;
+      }
+    }
+    else {
+      if (magnitude >= 1638) {
+      Serial.println("Fall detected");
+      state = 0;
+      }
+    }
   }
- }
   
-//  Serial.print(accelX);
-//  Serial.print(" , ");
-//  Serial.print(accelY);
-//  Serial.print(" , ");
-//  Serial.print(accelZ);
+  Serial.print(accelX);
+  Serial.print(" , ");
+  Serial.print(accelY);
+  Serial.print(" , ");
+  Serial.print(accelZ);
+  Serial.print(" , ");
+  Serial.print(magnitude);
+  Serial.println();
 
   // Calculate Pitch & Roll
 
   // Output
   
-  delay(10);
+  delay(100);
 }
