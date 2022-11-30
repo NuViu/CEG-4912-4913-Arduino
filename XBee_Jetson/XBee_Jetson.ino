@@ -158,12 +158,14 @@ void loop() {
 
   // Calculating the distance2 with average duration
   distance2 = (durations_sum2 / num_samples) * 0.034 / 2;
-  Serial.print("Distance: ");
-  Serial.println(distance);
-
-  //Distance 2
-  Serial.print("Distance2: ");
-  Serial.println(distance2);
+ 
+  
+//  Serial.print("Distance: ");
+//  Serial.println(distance);
+//
+//  //Distance 2
+//  Serial.print("Distance2: ");
+//  Serial.println(distance2);
 
 
   if (range_intensity1(distance)) {
@@ -175,7 +177,7 @@ void loop() {
   } else {
     //Assume intensity 0
     intensity = 0;
-    Serial.println("No vibration on LS");
+    //Serial.println("No vibration on LS");
   }
 
   if (range_intensity1(distance2)) {
@@ -187,7 +189,7 @@ void loop() {
   } else {
     //Assume intensity 0
     intensity2 = 0;
-    Serial.println("No vibration on RS");
+    //Serial.println("No vibration on RS");
   }
 
   // Accelerometer
@@ -239,7 +241,7 @@ void loop() {
   Serial.println(dict);
   Serial1.println(dict);
 
-  //delay(100);
+  delay(100);
 
 }
 
