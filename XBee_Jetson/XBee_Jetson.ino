@@ -247,16 +247,16 @@ void loop() {
 
 int range_intensity1(long distance) {
   // distance between 30cm & 40cm
-  return (distance >= 30 && distance < 40);
+  return (distance >= 20 && distance < 40);
 }
 
 int range_intensity2(long distance) {
-  // distance between 20cm & 30cm
-  return (distance >= 20 && distance < 30 );
+  // distance between 10cm & 30cm
+  return (distance >= 10 && distance < 20 );
 
 }
 
 int range_intensity3(long distance) {
   // distance less than 20cm
-  return (distance < 20);
+  return (distance < 10);
 }
