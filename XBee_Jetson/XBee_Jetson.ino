@@ -22,7 +22,7 @@ int16_t accelZ;
 int accelMagnitude;
 
 const int ACCEL_THRESHOLD = 10000; // 10% error margin for freefall
-const int FALL_TIMER_SEC = 5;
+const int FALL_TIMER_SEC = 10;
 
 // Ultrasonic
 // defines pins numbers
